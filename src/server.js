@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 
-const { getDiskInfo, uploadFile } = require('./services/yandex-disk.service');
+const { getDiskInfo, getDownloadUrl, uploadFile } = require('./services/yandex-disk.service');
 
 const app = express();
 
@@ -48,6 +48,49 @@ app.get('/api/yandex-disk/info', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get Yandex Disk information',
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+app.get('/api/yandex-disk/url', async (req, res) => {
+  try {
+    const path = req.query.path;
+
+    if (!path) {
+      return res.status(400).json({
+        success: false,
+        message: 'Path is required',
+      });
+    }
+
+    if (path.startsWith('/') || path.includes('..') || path.includes('\\')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid path',
+      });
+    }
+
+    console.log('Getting Yandex Disk download URL:', path);
+
+    const result = await getDownloadUrl(path);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        path,
+        url: result.href,
+      },
+    });
+  } catch (error) {
+    console.error(
+      'Yandex Disk download URL error:',
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get Yandex Disk download URL',
       error: error.response?.data || error.message,
     });
   }
@@ -98,10 +141,7 @@ app.post('/api/yandex-disk/upload', upload.single('file'),
         data: result,
       });
     } catch (error) {
-      console.error(
-        'Yandex Disk upload error:',
-        error.response?.data || error.message
-      );
+      console.error('Yandex Disk upload error:', error.response?.data || error.message);
 
       res.status(500).json({
         success: false,

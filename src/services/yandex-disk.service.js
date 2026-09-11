@@ -44,6 +44,26 @@ async function getUploadUrl(path, overwrite = true) {
   return response.data;
 }
 
+async function getDownloadUrl(path) {
+  if (!path) {
+    throw new Error('File path is required');
+  }
+
+  const fullPath =  `${YANDEX_DISK_BASE_PATH}/${path}`;
+
+  const response = await axios.get(
+    `${YANDEX_DISK_API_URL}/resources/download`,
+    {
+      headers: getHeaders(),
+      params: {
+        path: fullPath,
+      },
+    }
+  );
+
+  return response.data;
+}
+
 async function createFolder(path) {
   try {
     await axios.put(
@@ -153,6 +173,7 @@ async function uploadFile({path, buffer, contentType}) {
 module.exports = {
   getDiskInfo,
   getUploadUrl,
+  getDownloadUrl,
   createFolder,
   ensureDirectory,
   uploadFile,
