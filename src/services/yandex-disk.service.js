@@ -95,9 +95,7 @@ async function ensureDirectory(path) {
   let currentPath = '';
 
   for (const part of parts) {
-    currentPath += currentPath
-      ? `/${part}`
-      : part;
+    currentPath += currentPath ? `/${part}` : part;
 
     try {
       await axios.put(
@@ -111,24 +109,14 @@ async function ensureDirectory(path) {
         }
       );
 
-      console.log(
-        'Created Yandex Disk folder:',
-        currentPath
-      );
+      console.log('Created Yandex Disk folder:', currentPath);
     } catch (error) {
       if (error.response?.status === 409) {
-        console.log(
-          'Yandex Disk folder already exists:',
-          currentPath
-        );
+        console.log('Yandex Disk folder already exists:', currentPath);
         continue;
       }
 
-      console.error(
-        'Failed to create Yandex Disk folder:',
-        currentPath,
-        error.response?.data || error.message
-      );
+      console.error('Failed to create Yandex Disk folder:', currentPath, error.response?.data || error.message);
 
       throw error;
     }
@@ -170,6 +158,27 @@ async function uploadFile({path, buffer, contentType}) {
   };
 }
 
+async function createUploadUrl(path, overwrite = true) {
+  if (!path) {
+    throw new Error('Upload path is required');
+  }
+
+  const fullPath = `${YANDEX_DISK_BASE_PATH}/${path}`;
+
+  await ensureDirectory(fullPath);
+
+  const uploadInfo = await getUploadUrl(fullPath, overwrite);
+
+  if (!uploadInfo.href) {
+    throw new Error('Yandex Disk did not return upload URL');
+  }
+
+  return {
+    href: uploadInfo.href,
+    path,
+  };
+}
+
 module.exports = {
   getDiskInfo,
   getUploadUrl,
@@ -177,4 +186,5 @@ module.exports = {
   createFolder,
   ensureDirectory,
   uploadFile,
+  createUploadUrl,
 };

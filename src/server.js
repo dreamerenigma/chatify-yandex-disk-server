@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 
-const { getDiskInfo, getDownloadUrl, uploadFile } = require('./services/yandex-disk.service');
+const { getDiskInfo, getDownloadUrl, uploadFile, createUploadUrl } = require('./services/yandex-disk.service');
 
 const app = express();
 
@@ -91,6 +91,52 @@ app.get('/api/yandex-disk/url', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get Yandex Disk download URL',
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+app.post('/api/yandex-disk/upload-url', async (req, res) => {
+  try {
+    const { path } = req.body;
+
+    if (!path) {
+      return res.status(400).json({
+        success: false,
+        message: 'Path is required',
+      });
+    }
+
+    if (
+      path.startsWith('/') ||
+      path.includes('..') ||
+      path.includes('\\')
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid path',
+      });
+    }
+
+    console.log('Creating Yandex Disk upload URL:', path);
+
+    const result = await createUploadUrl(path, true);
+
+    console.log('Yandex Disk upload URL created:', path);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        path: result.path,
+        href: result.href,
+      },
+    });
+  } catch (error) {
+    console.error('Yandex Disk upload URL error:', error.response?.data || error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create Yandex Disk upload URL',
       error: error.response?.data || error.message,
     });
   }
