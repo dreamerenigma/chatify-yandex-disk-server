@@ -1,7 +1,6 @@
 const axios = require('axios');
 
 const YANDEX_DISK_API_URL = 'https://cloud-api.yandex.net/v1/disk';
-
 const YANDEX_DISK_BASE_PATH = 'Programming/Projects/Chatify';
 
 function getToken() {
@@ -179,6 +178,57 @@ async function createUploadUrl(path, overwrite = true) {
   };
 }
 
+async function getResource(path) {
+  if (!path || typeof path !== 'string') {
+    throw new Error('Resource path is required');
+  }
+
+  const fullPath = `${YANDEX_DISK_BASE_PATH}/${path}`;
+
+  const response = await axios.get(
+    `${YANDEX_DISK_API_URL}/resources`,
+    {
+      headers: getHeaders(),
+      params: {
+        path: fullPath,
+      },
+    }
+  );
+
+  return response.data;
+}
+
+async function listResources(path) {
+  const items = [];
+  const limit = 1000;
+  let offset = 0;
+
+  while (true) {
+    const response = await axios.get(
+      `${YANDEX_DISK_API_URL}/resources`,
+      {
+        headers: getHeaders(),
+        params: {
+          path: `${YANDEX_DISK_BASE_PATH}/${path}`,
+          limit,
+          offset,
+        },
+      }
+    );
+
+    const page = response.data._embedded?.items || [];
+    items.push(...page);
+
+    if (page.length === 0 || page.length < limit || !response.data._embedded?.next) {
+      break;
+    }
+
+    offset += page.length;
+  }
+
+  return items;
+}
+
 module.exports = {
   getDiskInfo,
   getUploadUrl,
@@ -187,4 +237,6 @@ module.exports = {
   ensureDirectory,
   uploadFile,
   createUploadUrl,
+  getResource,
+  listResources,
 };

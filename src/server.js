@@ -4,10 +4,13 @@ const express = require('express');
 const multer = require('multer');
 
 const { getDiskInfo, getDownloadUrl, uploadFile, createUploadUrl } = require('./services/yandex-disk.service');
+const stickerRoutes = require('./routes/sticker-routes');
 
 const app = express();
 
 app.use(express.json());
+
+app.use('/api/stickers', stickerRoutes);
 
 const PORT = process.env.PORT || 3000;
 
@@ -15,7 +18,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
 
   limits: {
-    fileSize: 50 * 1024 * 1024,
+    fileSize: 100 * 1024 * 1024,
   },
 });
 
