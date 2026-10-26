@@ -178,6 +178,39 @@ async function createUploadUrl(path, overwrite = true) {
   };
 }
 
+async function deleteFile(path, permanently = false) {
+  if (!path || typeof path !== 'string' || !path.trim()) {
+    throw new Error('File path is required');
+  }
+
+  const fullPath = `${YANDEX_DISK_BASE_PATH}/${path}`;
+
+  const response = await axios.delete(
+    `${YANDEX_DISK_API_URL}/resources`,
+    {
+      headers: getHeaders(),
+      params: {
+        path: fullPath,
+        permanently,
+      },
+    }
+  );
+
+  return {
+    path,
+    permanently,
+    status: response.status,
+  };
+}
+
+async function updateFile({ path, buffer, contentType }) {
+  if (!path || typeof path !== 'string' || !path.trim()) {
+    throw new Error('File path is required');
+  }
+
+  return uploadFile({ path, buffer, contentType });
+}
+
 async function getResource(path) {
   if (!path || typeof path !== 'string') {
     throw new Error('Resource path is required');
@@ -237,6 +270,8 @@ module.exports = {
   ensureDirectory,
   uploadFile,
   createUploadUrl,
+  deleteFile,
+  updateFile,
   getResource,
   listResources,
 };

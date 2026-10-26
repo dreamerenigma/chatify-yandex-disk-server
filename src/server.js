@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 
-const { getDiskInfo, getDownloadUrl, uploadFile, createUploadUrl } = require('./services/yandex-disk.service');
+const { getDiskInfo, getDownloadUrl, uploadFile, createUploadUrl, deleteFile, updateFile } = require('./services/yandex-disk.service');
 const stickerRoutes = require('./routes/sticker-routes');
 
 const app = express();
@@ -86,10 +86,7 @@ app.get('/api/yandex-disk/url', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      'Yandex Disk download URL error:',
-      error.response?.data || error.message
-    );
+    console.error('Yandex Disk download URL error:', error.response?.data || error.message);
 
     res.status(500).json({
       success: false,
@@ -199,6 +196,71 @@ app.post('/api/yandex-disk/upload', upload.single('file'),
       });
     }
   }
+);
+
+app.delete('/api/yandex-disk/file', async (req, res) => {
+  try {
+    const { path } = req.query;
+
+    if (typeof path !== 'string' || !path.trim() || path.startsWith('/') || path.includes('..') || path.includes('\\')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid path',
+      });
+    }
+
+    console.log('Deleting file from Yandex Disk:', path);
+
+    await deleteFile(path);
+
+    return res.status(200).json({
+      success: true,
+      data: { path },
+    });
+  } catch (error) {
+    console.error('Yandex Disk delete error:',error.response?.data || error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete file',
+    });
+  }
+});
+
+app.put('/api/yandex-disk/file', upload.single('file'),  async (req, res) => {
+    try {
+      const file = req.file;
+      const { path } = req.body;
+
+      if (!file) {
+        return res.status(400).json({
+          success: false,
+          message: 'File is required',
+        });
+      }
+
+      if ( typeof path !== 'string' || !path.trim() || path.startsWith('/') || path.includes('..') || path.includes('\\')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid path',
+        });
+      }
+
+      const result = await updateFile({path,buffer: file.buffer,contentType: file.mimetype});
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Yandex Disk update error:',error.response?.data || error.message);
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update file',
+      });
+    }
+  },
 );
 
 app.listen(PORT, () => {
