@@ -4,10 +4,7 @@ const STICKERS_PATH = 'stickers';
 const ALLOWED_EXTENSIONS = new Set(['.gif', '.png']);
 
 function isValidPackId(packId) {
-  return (
-    typeof packId === 'string' &&
-    /^[a-zA-Z0-9_-]+$/.test(packId)
-  );
+  return (typeof packId === 'string' && /^[a-zA-Z0-9_-]+$/.test(packId));
 }
 
 function isStickerFile(filename) {
@@ -72,7 +69,8 @@ async function getStickerPack(packId) {
       return {
         id: getFileId(file.name),
         filename: file.name,
-        format: file.name .slice(file.name.lastIndexOf('.') + 1).toLowerCase(),
+        format: file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase(),
+        path: path,
         url: download.href,
       };
     })
