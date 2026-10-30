@@ -60,6 +60,7 @@ async function getStickerPacks() {
 
 async function getStickerPack(packId) {
   const files = await getStickerFiles(packId);
+  const metadata = await getStickerPackMetadata(packId);
 
   const stickers = await Promise.all(
     files.map(async file => {
@@ -70,18 +71,51 @@ async function getStickerPack(packId) {
         id: getFileId(file.name),
         filename: file.name,
         format: file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase(),
-        path: path,
+        path,
         url: download.href,
+        size: file.size || 0,
       };
     })
   );
 
+  const totalSize = stickers.reduce((total, sticker) => total + sticker.size, 0);
+
   return {
     id: packId,
-    name: packId,
+    name: metadata.name,
+    description: metadata.description,
     stickerCount: stickers.length,
+    totalSize,
     stickers,
   };
+}
+
+async function getStickerPackMetadata(packId) {
+  const path = `${STICKERS_PATH}/${packId}/pack.json`;
+
+  try {
+    const download = await yandexDisk.getDownloadUrl(path);
+
+    const response = await fetch(download.href);
+
+    if (!response.ok) {
+      throw new Error(`Failed to load pack.json: ${response.status}`);
+    }
+
+    const metadata = await response.json();
+
+    return {
+      name: metadata.name || packId,
+      description: metadata.description || '',
+    };
+  } catch (error) {
+    console.error(`Failed to load metadata for ${packId}:`, error.message);
+
+    return {
+      name: packId,
+      description: '',
+    };
+  }
 }
 
 module.exports = {
