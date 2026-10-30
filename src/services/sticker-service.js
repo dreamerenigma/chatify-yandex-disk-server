@@ -1,7 +1,11 @@
 const yandexDisk = require('./yandex-disk.service');
 
+const CACHE_TTL = 15 * 60 * 1000;
 const STICKERS_PATH = 'stickers';
 const ALLOWED_EXTENSIONS = new Set(['.gif', '.png']);
+
+const stickerPackCache = new Map();
+const pendingRequests = new Map();
 
 function isValidPackId(packId) {
   return (typeof packId === 'string' && /^[a-zA-Z0-9_-]+$/.test(packId));
@@ -19,6 +23,39 @@ function isStickerFile(filename) {
 
 function getFileId(filename) {
   return filename.slice(0, filename.lastIndexOf('.'));
+}
+
+function getCachedPack(packId) {
+  const cached = stickerPackCache.get(packId);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (Date.now() >= cached.expiresAt) {
+    stickerPackCache.delete(packId);
+    return null;
+  }
+
+  return cached.data;
+}
+
+function setCachedPack(packId, data) {
+  stickerPackCache.set(packId, {
+    data,
+    expiresAt: Date.now() + CACHE_TTL,
+  });
+}
+
+function clearPackCache(packId) {
+  if (packId) {
+    stickerPackCache.delete(packId);
+    console.log(`[Sticker cache] Cleared: ${packId}`);
+    return;
+  }
+
+  stickerPackCache.clear();
+  console.log('[Sticker cache] Cleared all packs');
 }
 
 async function getStickerFiles(packId) {
@@ -59,6 +96,42 @@ async function getStickerPacks() {
 }
 
 async function getStickerPack(packId) {
+  if (!isValidPackId(packId)) {
+    throw new Error('Invalid sticker pack ID');
+  }
+
+  const cached = getCachedPack(packId);
+
+  if (cached) {
+    console.log(`[Sticker cache] HIT: ${packId}`);
+    return cached;
+  }
+
+  console.log(`[Sticker cache] MISS: ${packId}`);
+
+  if (pendingRequests.has(packId)) {
+    console.log(`[Sticker cache] Pending request: ${packId}`);
+    return pendingRequests.get(packId);
+  }
+
+  const request = loadStickerPack(packId)
+    .then(pack => {
+      setCachedPack(packId, pack);
+
+      console.log(`[Sticker cache] Stored: ${packId}`);
+
+      return pack;
+    })
+    .finally(() => {
+      pendingRequests.delete(packId);
+    });
+
+  pendingRequests.set(packId, request);
+
+  return request;
+}
+
+async function loadStickerPack(packId) {
   const files = await getStickerFiles(packId);
   const metadata = await getStickerPackMetadata(packId);
 
@@ -121,4 +194,5 @@ async function getStickerPackMetadata(packId) {
 module.exports = {
   getStickerPacks,
   getStickerPack,
+  clearPackCache,
 };

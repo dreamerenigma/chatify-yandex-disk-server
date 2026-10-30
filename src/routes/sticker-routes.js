@@ -53,4 +53,23 @@ router.get("/packs/:packId", async (req, res) => {
   }
 });
 
+
+router.delete("/packs/:packId/cache", (req, res) => {
+  try {
+    stickerService.clearPackCache(req.params.packId);
+
+    res.json({
+      success: true,
+      message: "Кеш набора успешно очищен",
+    });
+  } catch (error) {
+    console.error("Failed to clear sticker pack cache:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Не удалось очистить кеш",
+    });
+  }
+});
+
 module.exports = router;
